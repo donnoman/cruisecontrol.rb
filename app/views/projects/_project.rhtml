@@ -61,7 +61,16 @@
   </td>
 
   <td class="build_details">
+
     <% latest_build = recent_builds.first %>
+    <% if File.exists? "#{latest_build.artifacts_directory}/DESCRIPTION" %>
+      <% description_artifact = "#{latest_build.artifacts_directory}/DESCRIPTION" %>
+    <% elsif File.exists? "#{project.last_build.artifacts_directory}/DESCRIPTION" %>
+      <% description_artifact = "#{project.last_build.artifacts_directory}/DESCRIPTION" %>
+    <% end %>
+    <% if description_artifact %>
+      <p><%=File.read(description_artifact).gsub(/\n/, '<br/>')%></p>
+    <% end %>
     <% if latest_build %>
       <% if latest_build.incomplete? %>
         <div>
