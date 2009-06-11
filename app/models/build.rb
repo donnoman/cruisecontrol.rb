@@ -2,7 +2,7 @@ class Build
   include CommandLine
 
   attr_reader :project, :label
-  IGNORE_ARTIFACTS = /^(\..*|build_status\..+|build.log|changeset.log|cruise_config.rb|plugin_errors.log)$/
+  IGNORE_ARTIFACTS = /^(\..*|build_status\..+|cruise_config.rb|plugin_errors.log)$/
 
   def initialize(project, label)
     @project, @label = project, label.to_s
