@@ -1,19 +1,7 @@
-ENV["RAILS_ENV"] = "test"
-
+$:.unshift File.join(File.dirname(__FILE__), '..')
 require File.expand_path(File.dirname(__FILE__) + "/../config/environment")
-
-require_dependency 'application'
-
-# Make double-sure the RAILS_ENV is set to test,
-# so fixtures are loaded to the right database
-silence_warnings { RAILS_ENV = "test" }
-
-require 'test/unit'
-require 'action_controller/test_process'
-require 'action_controller/integration'
-require 'breakpoint'
+require 'test_help'
 require 'mocha'
-require 'stubba'
 
 $LOAD_PATH << File.dirname(__FILE__)
 require 'file_sandbox'

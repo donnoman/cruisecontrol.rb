@@ -51,6 +51,21 @@ class ProjectTest < Test::Unit::TestCase
       assert_nil @project.last_complete_build
     end
   end
+  
+  def test_previously_built_should_return_true_if_there_is_a_complete_build
+    in_sandbox do |sandbox|
+      @project.path = sandbox.root
+      sandbox.new :directory => "build-1-success.in1s/"
+      assert @project.previously_built?
+    end
+  end
+  
+  def test_previously_built_should_return_false_if_there_are_no_previous_builds
+    in_sandbox do |sandbox|
+      @project.path = sandbox.root
+      assert !@project.previously_built?
+    end    
+  end
 
   def test_builds_should_return_empty_array_when_project_has_no_builds
     in_sandbox do |sandbox|
@@ -227,6 +242,7 @@ class ProjectTest < Test::Unit::TestCase
       listener = Object.new
       listener.expects(:sleeping).raises(StandardError.new("Listener failed"))
       listener.expects(:doing_something).with(:foo).raises(StandardError.new("Listener failed with :foo"))
+      BuilderPlugin.stubs(:known_event?).returns true
 
       @project.add_plugin listener
 
@@ -313,8 +329,8 @@ class ProjectTest < Test::Unit::TestCase
   end
 
   def test_notify_should_handle_plugin_error
+    BuilderPlugin.expects(:known_event?).with(:hey_you).returns true
     plugin = Object.new
-    
     @project.plugins << plugin
     
     plugin.expects(:hey_you).raises("Plugin talking")
@@ -323,6 +339,7 @@ class ProjectTest < Test::Unit::TestCase
   end
 
   def test_notify_should_handle_multiple_plugin_errors
+    BuilderPlugin.stubs(:known_event?).with(:hey_you).returns true
     plugin1 = Object.new
     plugin2 = Object.new
     
@@ -634,28 +651,77 @@ class ProjectTest < Test::Unit::TestCase
     assert_equal(File.expand_path("foo/work"), @svn.path)
   end
   
+  def test_plugins_should_be_accessible_by_their_name
+    plugin = BuildReaper.new(@project)
+    @project.add_plugin plugin
+    assert_equal plugin, @project.build_reaper
+  end
+  
+  def test_adding_a_plugin_should_raise_exception_if_already_configured
+    assert_raises RuntimeError do
+      @project.add_plugin BuildReaper.new(@project)
+      @project.add_plugin BuildReaper.new(@project)
+    end
+  end
+  
+  def test_notifying_project_of_an_unknown_event_raises_exception
+    BuilderPlugin.expects(:known_event?).returns false
+    assert_raises RuntimeError do
+      @project.notify :some_random_event
+    end
+  end
+  
+  def test_project_all_should_return_all_existing_projects
+    svn = FakeSourceControl.new("bob")
+    one = Project.new("one", @svn)
+    two = Project.new("two", @svn)
+    
+    in_sandbox do |sandbox|
+      sandbox.new :file => "one/cruise_config.rb", :with_content => ""
+      sandbox.new :file => "two/cruise_config.rb", :with_content => ""
+      assert_equal %w(one two), Project.all(sandbox.root).map(&:name)
+    end
+  end
+
+  def test_project_all_should_always_reload_project_objects
+    svn = FakeSourceControl.new("bob")
+    one = Project.new("one", @svn)
+    two = Project.new("two", @svn)
+    
+    in_sandbox do |sandbox|
+      sandbox.new :file => "one/cruise_config.rb", :with_content => ""
+      sandbox.new :file => "two/cruise_config.rb", :with_content => ""
+      old_projects = Project.all(sandbox.root)
+      
+      sandbox.new :file => "three/cruise_config.rb", :with_content => ""
+      current_projects = Project.all(sandbox.root)
+      
+      assert_not_equal old_projects, current_projects
+      assert_not_same old_projects.first, current_projects.first
+    end
+  end
+  
   private
   
-  def stub_build(label)
-    build = Object.new
-    build.stubs(:label).returns(label)
-    build.stubs(:artifacts_directory).returns("project1/build-#{label}")
-    build.stubs(:run)
-    build.stubs(:successful?).returns(true)
-    build
-  end
+    def stub_build(label)
+      stub(
+        :label => label, 
+        :artifacts_directory => "project1/build-#{label}", 
+        :successful? => true, 
+        :run => nil
+      )
+    end
 
-  def new_revision(number)
-    SourceControl::Subversion::Revision.new(number, 'alex', DateTime.new(2005, 1, 1), 'message', [])
-  end
+    def new_revision(number)
+      SourceControl::Subversion::Revision.new(number, 'alex', DateTime.new(2005, 1, 1), 'message', [])
+    end
 
-  def new_mock_build(label)
-    build = Object.new
-    Build.expects(:new).with(@project, label).returns(build)
-    build.stubs(:artifacts_directory).returns("project1/build-#{label}")
-    build.stubs(:last).returns(nil)
-    build.stubs(:label).returns(label)
-    build
-  end  
+    def new_mock_build(label)
+      build = Object.new
+      Build.expects(:new).with(@project, label).returns(build)
+      build.stubs(:artifacts_directory).returns("project1/build-#{label}")
+      build.stubs(:last).returns(nil)
+      build.stubs(:label).returns(label)
+      build
+    end
 end
-

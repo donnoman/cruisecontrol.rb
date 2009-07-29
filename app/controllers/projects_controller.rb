@@ -7,12 +7,12 @@ class ProjectsController < ApplicationController
          :render => { :text => "Path not specified",
                       :status => 404 }
   def index
-    @projects = Projects.load_all
+    @projects = Project.all
     
     respond_to do |format|
       format.html
       format.js { render :action => 'index_js' }
-      format.rss { render :action => 'index_rss', :layout => false }
+      format.rss { render :action => 'index_rss', :layout => false, :format => :xml }
       format.cctray { render :action => 'index_cctray', :layout => false }
     end
   end
@@ -34,9 +34,9 @@ class ProjectsController < ApplicationController
     render :text => "Project #{params[:id].inspect} not found", :status => 404 and return unless @project
 
     @project.request_build rescue nil
-    @projects = Projects.load_all
+    @projects = Project.all
 
-    render :action => 'index_js'
+    respond_to { |format| format.js { render :action => 'index_js' } }
   end
   
   def code
