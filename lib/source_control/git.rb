@@ -49,6 +49,11 @@ module SourceControl
         git("reset", ["--hard"])
       end
       git_update_submodule
+      begin
+        execute_in_local_copy("/usr/local/ruby-enterprise/bin/bundle install",{})
+      rescue
+	#nothing needed
+      end
     end
 
     def up_to_date?(reasons = [])

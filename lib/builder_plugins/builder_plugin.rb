@@ -37,7 +37,7 @@ class BuilderPlugin
           if File.file?(init_path)
             load_plugin(init_path)
           else
-            log.error("No init.rb found in plugin directory #{plugin}")
+            #log.error("No init.rb found in plugin directory #{plugin}")
           end
         end
       end
